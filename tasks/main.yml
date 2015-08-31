@@ -1,0 +1,63 @@
+---
+- name: Add Logstash repository apt-key
+  apt_key:
+    id: "D88E42B4"
+    url: "https://packages.elastic.co/GPG-KEY-elasticsearch"
+    state: present
+- name: Logstash apt repo
+  apt_repository:
+    repo="deb http://packages.elasticsearch.org/logstash/{{ logstash_version }}/{{ ansible_os_family|lower }} stable main"
+    update_cache=yes
+  sudo: yes
+- name: Install logstash apt packages
+  apt: pkg={{ item }} update_cache=yes state=present
+  with_items:
+   - logstash
+  sudo: yes
+  when: ansible_os_family == 'Debian'
+  notify: Restart logstash
+- name: Ensure SSL certificates have the correct directories
+  file: path=/etc/pki/tls/{{item}} owner=root group=root mode=0755 state=directory
+  with_items:
+    - certs
+    - private
+- name: Ensure logstash has its SSL certificate
+  template:
+    src=logstash.crt
+    dest=/etc/pki/tls/certs/logstash.crt
+    owner=root group=root mode=0755
+  sudo: yes
+  notify: Restart logstash
+- name: Ensure logstash has its SSL private key
+  template:
+    src=logstash.key
+    dest=/etc/pki/tls/private/logstash.key
+    owner=root group=root mode=0755
+  sudo: yes
+  notify: Restart logstash
+- name: Logstash conf file
+  template:
+    src={{ item.src }}
+    dest=/etc/logstash/conf.d/{{ item.dest }}
+    owner=root group=root mode=644
+  with_items: logstash_configs
+  sudo: yes
+  notify: Restart logstash
+- name: Creates pattern directory
+  file: path=/opt/logstash/patterns state=directory
+- name: Logstash pattern files
+  template:
+    src={{ item.src }}
+    dest=/opt/logstash/patterns/{{ item.dest }}
+    owner=root group=root mode=644
+  with_items: logstash_patterns
+  sudo: yes
+  when: logstash_patterns is defined
+  notify: Restart logstash
+- name: Make monit to look after Logstash
+  template:
+    src=logstash.monitrc.conf.j2
+    dest=/etc/monit/conf.d/logstash
+    owner=root group=root mode=644
+  sudo: yes
+  notify: Restart monit

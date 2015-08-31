@@ -1,0 +1,13 @@
+input {
+  file {
+    type => "syslog"
+
+    # Wildcards work here :)
+    path => [ "/var/log/syslog" ]
+  }
+  lumberjack {
+          port => "5043"
+          ssl_certificate => "/etc/pki/tls/certs/logstash.crt"
+          ssl_key => "/etc/pki/tls/private/logstash.key"
+  }
+}

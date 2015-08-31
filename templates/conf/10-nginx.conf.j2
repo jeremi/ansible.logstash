@@ -1,0 +1,13 @@
+filter {
+  if [type] == "nginx_access" {
+      grok {
+        match => { "message" => "%{NGINXACCESS}" }
+      }
+      date {
+        match => [ "timestamp" , "dd/MMM/YYYY:HH:mm:ss Z" ]
+      }
+      geoip {
+        source => "clientip"
+      }
+  }
+}
